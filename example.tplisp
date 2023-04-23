@@ -1,0 +1,21 @@
+;; Example TinyPyLisp code
+;; import numpy and matplotlib
+(import 'numpy 'np)
+(import 'matplotlib.pyplot 'plt)
+
+;; read user inputs
+(define min-x  (float (read "min-x?  ")))
+(define max-x  (float (read "max-x?  ")))
+(define x-step (float (read "x-step? ")))
+
+;; define variables
+(define x (np-arange min-x max-x x-step))
+
+;; define functions
+(define (f x) (* x (np-sin x)))
+
+;; plot
+(plt-plot x (f x))
+(plt-title "TinyPyLisp Example")
+(plt-show)
+
