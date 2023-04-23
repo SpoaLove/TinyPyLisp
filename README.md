@@ -14,3 +14,5 @@ python repl.py
 ```sh
 python repl.py example.tplisp
 ```
+
+![Screenshot](screenshot.png)
