@@ -6,6 +6,7 @@ import os
 from inspect import getmembers
 import importlib
 
+
 class Environment:
     def __init__(self, parent=None):
         self.parent = parent
@@ -76,6 +77,8 @@ class LispInterpreter:
         self.global_env.define('*', lambda *args: functools.reduce(lambda x, y: x * y, args))
         self.global_env.define('/', lambda *args: args[0] / functools.reduce(lambda x, y: x * y, args[1:]))
         self.global_env.define('import', self.global_env.import_module)
+        self.global_env.define('eval', self.eval)
+    
     
     def add_default_ios(self):
         def display(*args, end='\n'):
@@ -105,6 +108,12 @@ class LispInterpreter:
         self.global_env.define('dict', CallableDict)
         self.global_env.define('in', is_in)
 
+        # TODO: call functions with args and kwargs
+        # lambda *args: functools.reduce(lambda x, y: x * y, args))
+        def call(callable, *args):
+            return callable(*args[:-1], **args[-1])
+        self.global_env.define('call', call)
+    
     def eval(self, expression, env=None):
         if env is None:
             env = self.global_env
@@ -146,11 +155,17 @@ class LispInterpreter:
             args = [self.eval(operand, env) for operand in operands]
             return function(*args)
 
+
+
+    
     def repl(self):
         while True:
             try:
-                input_string = input('> ')
-                expression = LispParser.parse(input_string)
+                input_string = LispParser.remove_comments(input('> '))
+                while not LispParser.check_matching_parentheses(input_string):
+                    input_string += LispParser.remove_comments(input('..'))
+
+                expression = LispParser.parse(input_string.replace('\n', '').strip())
                 if expression != None:
                     result = self.eval(expression)
                     print(result)
@@ -159,6 +174,25 @@ class LispInterpreter:
 
 
 class LispParser:
+    @staticmethod
+    def remove_comments(input_str):
+        comment_start = input_str.find(';')
+        if comment_start != -1:
+            input_str = input_str[:comment_start]
+        return input_str.strip()
+    @staticmethod
+    def check_matching_parentheses(input_str):
+        if not input_str:
+            return False
+        stack = []
+        for char in input_str:
+            if char == '(':
+                stack.append(char)
+            elif char == ')':
+                if not stack:
+                    return False
+                stack.pop()
+        return not stack
     @staticmethod
     def parse(input_string):
         tokens = LispParser.tokenize(input_string)
@@ -228,18 +262,25 @@ def main(file_path=None, keep_repl=False, use_default_ios=True, use_python_built
     else:
         f = open(file_path, 'r')
         source_code = f.readlines()
-        for input_string in source_code:
-            if len(input_string.strip()):
-                try:
-                    expression = LispParser.parse(input_string)
-                    if expression == None:
-                        continue
-                    result = interpreter.eval(expression)
-                    if result != None:
+
+        # input_string = input('> ')
+        # while not LispParser.check_matching_parentheses(input_string):
+        #     input_string += input('..')
+        input_buffer = ''
+        for input_line in source_code:
+            input_line = LispParser.remove_comments(input_line)
+            if len(input_line):
+                input_buffer += input_line
+                if LispParser.check_matching_parentheses(input_buffer):
+                    try:
+                        expression = LispParser.parse(input_buffer)
+                        if expression == None:
+                            continue
+                        result = interpreter.eval(expression)
                         print(result)
-                except (SyntaxError, NameError, TypeError, KeyError) as error:
-                    print('Error:', error)
-                    # break
+                    except (SyntaxError, NameError, TypeError, KeyError) as error:
+                        print('Error:', error)
+                    input_buffer = ''
         if keep_repl:
             interpreter.repl()
 

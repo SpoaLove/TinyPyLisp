@@ -1,0 +1,33 @@
+;; Example TinyPyLisp code
+;; import numpy and matplotlib
+(import 'numpy 'np) ;; import numpy and matplotlib
+(import 'matplotlib.pyplot 'plt)
+(import 'librosa)
+(import 'librosa.display 'librosa-display)
+
+
+;; read trumpet
+(define y (car (librosa-load (librosa-ex 'trumpet))))
+(define sr 22050)
+
+;; calculate stft
+(define D (librosa-stft y))
+(define nil (list))
+(define (pair l1 l2) (cons l1 (cons l2 nil)))
+(define (mk a b) 
+    (if (eq? (cdr a) nil) 
+    (cons (pair (car a) (car b)) nil) 
+    (cons (pair (car a) (car b)) 
+          (mk (cdr a) (cdr b)))))
+(define (make-kwargs keys values)  (dict (mk keys values)))
+(define kwargs (make-kwargs '(S ref) (pair (np-abs D) np-max)))
+(define S_db (call librosa-amplitude_to_db kwargs))
+
+;; plot
+(plt-figure)
+(librosa-display-specshow S_db)
+(plt-colorbar)
+(plt-title "STFT")
+(plt-xlabel "Time(s)")
+(plt-ylabel "Amplitude(dB)")
+(plt-show)
